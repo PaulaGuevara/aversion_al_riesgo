@@ -1,5 +1,3 @@
-# Aversión al riesgo
-
 # Dashboard – Aversión al Riesgo en Colombia
 
 Este tablero fue construido con Streamlit y replica el modelo de aversión al riesgo 
