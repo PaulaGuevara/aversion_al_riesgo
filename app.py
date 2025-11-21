@@ -15,7 +15,8 @@ st.set_page_config(
 )
 
 # Tema gris con azul - Paleta profesional
-color_palette = ["#1E3A8A", "#3B82F6", "#60A5FA", "#93C5FD", "#BFDBFE"]
+color_palette = ["#1E3A8A", "#3B82F6", "#60A5FA", "#93C5FD", "#BFDBFE", 
+                 "#1E40AF", "#2563EB", "#3B82F6", "#60A5FA", "#93C5FD"]
 bg_color = "#F3F4F6"
 text_color = "#1F2937"
 
@@ -32,9 +33,13 @@ st.markdown("""
         color: #1E3A8A;
     }
     
-    /* Sidebar */
+    /* Sidebar con fondo azul claro */
     [data-testid="stSidebar"] {
-        background-color: #E5E7EB;
+        background-color: #DBEAFE;
+    }
+    
+    [data-testid="stSidebar"] > div:first-child {
+        background-color: #DBEAFE;
     }
     
     /* Métricas */
@@ -117,11 +122,11 @@ with st.sidebar:
     page = st.radio(
         "**Navegación**",
         [
-            "📊 Contexto",
-            "📈 Aversión al riesgo",
-            "🌊 Volatilidad dinámica (σₜ)",
-            "⚖️ Volatilidad histórica vs dinámica",
-            "🔬 Diagnósticos GARCH"
+            "Contexto",
+            "Aversión al riesgo",
+            "Volatilidad dinámica",
+            "Volatilidad histórica vs dinámica",
+            "Diagnósticos GARCH"
         ]
     )
     
@@ -138,9 +143,9 @@ with st.sidebar:
 # 1. CONTEXTO
 # ============================================================
 
-if page == "📊 Contexto":
+if page == "Contexto":
 
-    st.title("🇨🇴 Aversión al Riesgo en el Mercado Colombiano (2020–2025)")
+    st.title("Aversión al Riesgo en el Mercado Colombiano (2020–2025)")
 
     st.markdown("""
     <div style='background-color: white; padding: 20px; border-radius: 10px; border-left: 5px solid #1E3A8A;'>
@@ -158,7 +163,7 @@ if page == "📊 Contexto":
     with col1:
         st.markdown("""
         <div style='background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-        <h4 style='color: #1E3A8A;'>📐 CRRA</h4>
+        <h4 style='color: #1E3A8A;'>CRRA</h4>
         <p style='color: #4B5563;'><b>Constant Relative Risk Aversion</b></p>
         <p style='color: #6B7280;'>Mide la concavidad de la utilidad bajo riesgo con aversión relativa constante.</p>
         </div>
@@ -167,7 +172,7 @@ if page == "📊 Contexto":
     with col2:
         st.markdown("""
         <div style='background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-        <h4 style='color: #1E3A8A;'>🔧 FTP</h4>
+        <h4 style='color: #1E3A8A;'>FTP</h4>
         <p style='color: #4B5563;'><b>Flexible Three-Parameter</b></p>
         <p style='color: #6B7280;'>Modelo más flexible que captura preferencias no lineales con tres parámetros.</p>
         </div>
@@ -176,7 +181,7 @@ if page == "📊 Contexto":
     with col3:
         st.markdown("""
         <div style='background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-        <h4 style='color: #1E3A8A;'>📊 GARCH(1,1)</h4>
+        <h4 style='color: #1E3A8A;'>GARCH(1,1)</h4>
         <p style='color: #4B5563;'><b>Volatilidad Condicional</b></p>
         <p style='color: #6B7280;'>Usa la volatilidad condicional σₜ en lugar de volatilidad histórica.</p>
         </div>
@@ -188,7 +193,7 @@ if page == "📊 Contexto":
     # KPIs
     # ============================
 
-    st.subheader("📊 Indicadores Principales")
+    st.subheader("Indicadores Principales")
 
     c1, c2, c3 = st.columns(3)
 
@@ -209,7 +214,7 @@ if page == "📊 Contexto":
     # Gráfico inicial
     # ============================
 
-    st.subheader("📊 Comparación General de γ por Método")
+    st.subheader("Comparación General de γ por Método")
 
     df_long = df_filtered.melt(
         id_vars="Activo",
@@ -218,24 +223,36 @@ if page == "📊 Contexto":
         value_name="Gamma"
     )
 
-    fig = px.bar(
-        df_long,
-        x="Activo",
-        y="Gamma",
-        color="Método",
-        color_discrete_sequence=color_palette,
-        barmode="group",
-        template=plotly_template,
-        height=500
-    )
+    # Gráfico de líneas
+    fig = go.Figure()
+    
+    metodos = df_long["Método"].unique()
+    colores_metodo = {
+        "gamma_CRRA": color_palette[0],
+        "gamma_FTP": color_palette[1],
+        "gamma_GARCH": color_palette[2]
+    }
+    
+    for i, metodo in enumerate(metodos):
+        df_metodo = df_long[df_long["Método"] == metodo]
+        fig.add_trace(go.Scatter(
+            x=df_metodo["Activo"],
+            y=df_metodo["Gamma"],
+            mode='lines+markers',
+            name=metodo.replace("gamma_", ""),
+            line=dict(color=colores_metodo[metodo], width=3),
+            marker=dict(size=8)
+        ))
     
     fig.update_layout(
         plot_bgcolor='white',
         paper_bgcolor='white',
         font=dict(color=text_color),
         title_font_color='#1E3A8A',
-        xaxis=dict(showgrid=True, gridcolor='#E5E7EB'),
-        yaxis=dict(showgrid=True, gridcolor='#E5E7EB')
+        xaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Activo'),
+        yaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Coeficiente γ'),
+        height=500,
+        hovermode='x unified'
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -246,32 +263,26 @@ if page == "📊 Contexto":
 # 2. AVERSIÓN AL RIESGO COMPLETA
 # ============================================================
 
-elif page == "📈 Aversión al riesgo":
+elif page == "Aversión al riesgo":
 
-    st.title("📈 Aversión al Riesgo – CRRA, FTP y GARCH")
+    st.title("Aversión al Riesgo – CRRA, FTP y GARCH")
 
     if df_full is None:
-        st.error("❌ No se encontró resultados_completos_tablero.csv")
+        st.error("No se encontró resultados_completos_tablero.csv")
         st.stop()
 
     df = df_full[~df_full["Activo"].isin(excluir_macro)].copy()
 
-    st.subheader("📋 Tabla de Resultados")
+    st.subheader("Tabla de Resultados")
     
-    # Aplicar formato a la tabla
-    st.dataframe(
-        df.round(4).style.background_gradient(
-            cmap='Blues', 
-            subset=['gamma_CRRA', 'gamma_FTP', 'gamma_GARCH']
-        ),
-        use_container_width=True
-    )
+    # Tabla sin estilos de color
+    st.dataframe(df.round(4), use_container_width=True)
     
     st.caption("**Tabla:** Coeficientes γ estimados bajo las metodologías CRRA, FTP y GARCH para cada activo financiero colombiano.")
 
     st.markdown("##")
     
-    st.subheader("📊 Comparación Visual")
+    st.subheader("Comparación Visual")
 
     df_long = df.melt(
         id_vars="Activo",
@@ -280,40 +291,52 @@ elif page == "📈 Aversión al riesgo":
         value_name="Gamma"
     )
 
-    fig = px.bar(
-        df_long,
-        x="Activo",
-        y="Gamma",
-        color="Método",
-        color_discrete_sequence=color_palette,
-        template=plotly_template,
-        barmode="group",
-        height=600
-    )
+    # Gráfico de líneas
+    fig = go.Figure()
+    
+    metodos = df_long["Método"].unique()
+    colores_metodo = {
+        "gamma_CRRA": color_palette[0],
+        "gamma_FTP": color_palette[1],
+        "gamma_GARCH": color_palette[2]
+    }
+    
+    for metodo in metodos:
+        df_metodo = df_long[df_long["Método"] == metodo]
+        fig.add_trace(go.Scatter(
+            x=df_metodo["Activo"],
+            y=df_metodo["Gamma"],
+            mode='lines+markers',
+            name=metodo.replace("gamma_", ""),
+            line=dict(color=colores_metodo[metodo], width=3),
+            marker=dict(size=8)
+        ))
     
     fig.update_layout(
         plot_bgcolor='white',
         paper_bgcolor='white',
         font=dict(color=text_color),
         title_font_color='#1E3A8A',
-        xaxis=dict(showgrid=True, gridcolor='#E5E7EB'),
-        yaxis=dict(showgrid=True, gridcolor='#E5E7EB')
+        xaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Activo'),
+        yaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Coeficiente γ'),
+        height=600,
+        hovermode='x unified'
     )
     
     st.plotly_chart(fig, use_container_width=True)
     
-    st.caption("**Análisis:** Las barras agrupadas permiten comparar directamente los tres métodos. GARCH suele producir valores intermedios al considerar la volatilidad dinámica del mercado.")
+    st.caption("**Análisis:** Las líneas permiten comparar directamente los tres métodos. GARCH suele producir valores intermedios al considerar la volatilidad dinámica del mercado.")
 
 # ============================================================
 # 3. VOLATILIDAD DINÁMICA σₜ
 # ============================================================
 
-elif page == "🌊 Volatilidad dinámica (σₜ)":
+elif page == "Volatilidad dinámica":
 
-    st.title("🌊 Volatilidad Dinámica – Modelo GARCH(1,1)")
+    st.title("Volatilidad Dinámica – Modelo GARCH(1,1)")
 
     if df_timeseries is None:
-        st.error("❌ No se encontró garch_timeseries.csv")
+        st.error("No se encontró garch_timeseries.csv")
         st.stop()
 
     df = df_timeseries.copy()
@@ -321,7 +344,7 @@ elif page == "🌊 Volatilidad dinámica (σₜ)":
 
     df = df[~df["Activo"].isin(excluir_macro)]
 
-    activos = df["Activo"].unique()
+    activos = sorted(df["Activo"].unique())
 
     st.markdown("""
     <div style='background-color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;'>
@@ -333,32 +356,53 @@ elif page == "🌊 Volatilidad dinámica (σₜ)":
     """, unsafe_allow_html=True)
 
     activos_sel = st.multiselect(
-        "🔍 Seleccione acciones para comparar:",
+        "Seleccione acciones para comparar:",
         activos,
-        default=list(activos)[:5],
+        default=activos,  # Todas las acciones por defecto
         help="Puede seleccionar múltiples acciones para comparar su volatilidad"
     )
 
+    if len(activos_sel) == 0:
+        st.warning("Por favor seleccione al menos una acción.")
+        st.stop()
+
     df_plot = df[df["Activo"].isin(activos_sel)]
 
-    fig = px.line(
-        df_plot,
-        x="Fecha",
-        y="sigma_t",
-        color="Activo",
-        template=plotly_template,
-        color_discrete_sequence=color_palette,
-        height=600
-    )
+    # Gráfico de líneas con colores distintos
+    fig = go.Figure()
+    
+    # Asignar colores a cada activo
+    colores_activos = {}
+    palette_extended = color_palette * ((len(activos_sel) // len(color_palette)) + 1)
+    
+    for i, activo in enumerate(sorted(activos_sel)):
+        colores_activos[activo] = palette_extended[i]
+        df_activo = df_plot[df_plot["Activo"] == activo]
+        
+        fig.add_trace(go.Scatter(
+            x=df_activo["Fecha"],
+            y=df_activo["sigma_t"],
+            mode='lines',
+            name=activo,
+            line=dict(color=palette_extended[i], width=2.5)
+        ))
     
     fig.update_layout(
         plot_bgcolor='white',
         paper_bgcolor='white',
         font=dict(color=text_color),
         title_font_color='#1E3A8A',
-        xaxis=dict(showgrid=True, gridcolor='#E5E7EB'),
+        xaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Fecha'),
         yaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Volatilidad Condicional (σₜ)'),
-        hovermode='x unified'
+        height=600,
+        hovermode='x unified',
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="right",
+            x=0.99,
+            bgcolor="rgba(255,255,255,0.8)"
+        )
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -369,12 +413,12 @@ elif page == "🌊 Volatilidad dinámica (σₜ)":
 # 4. VOLATILIDAD HISTÓRICA VS GARCH
 # ============================================================
 
-elif page == "⚖️ Volatilidad histórica vs dinámica":
+elif page == "Volatilidad histórica vs dinámica":
 
-    st.title("⚖️ Volatilidad Histórica vs Volatilidad GARCH")
+    st.title("Volatilidad Histórica vs Volatilidad GARCH")
 
     if df_hist_vs_dyn is None:
-        st.error("❌ Archivo vol_hist_vs_garch.csv no encontrado.")
+        st.error("Archivo vol_hist_vs_garch.csv no encontrado.")
         st.stop()
 
     df = df_hist_vs_dyn.copy()
@@ -390,9 +434,9 @@ elif page == "⚖️ Volatilidad histórica vs dinámica":
     </div>
     """, unsafe_allow_html=True)
 
-    activos = df["Activo"].unique()
+    activos = sorted(df["Activo"].unique())
     activo_sel = st.selectbox(
-        "🔍 Seleccione una acción:",
+        "Seleccione una acción:",
         activos,
         help="Elija un activo para visualizar la comparación"
     )
@@ -444,12 +488,12 @@ elif page == "⚖️ Volatilidad histórica vs dinámica":
 # 5. DIAGNÓSTICOS GARCH
 # ============================================================
 
-elif page == "🔬 Diagnósticos GARCH":
+elif page == "Diagnósticos GARCH":
 
-    st.title("🔬 Diagnósticos del Modelo GARCH(1,1)")
+    st.title("Diagnósticos del Modelo GARCH(1,1)")
 
     if df_tests is None:
-        st.error("❌ No se encontró garch_supuestos.csv")
+        st.error("No se encontró garch_supuestos.csv")
         st.stop()
 
     df = df_tests.copy()
@@ -464,23 +508,12 @@ elif page == "🔬 Diagnósticos GARCH":
     </div>
     """, unsafe_allow_html=True)
 
-    st.subheader("📋 Resultados de Pruebas Estadísticas")
+    st.subheader("Resultados de Pruebas Estadísticas")
     
-    # Aplicar formato condicional
-    def color_pvalues(val):
-        if isinstance(val, (int, float)):
-            if val < 0.05:
-                return 'background-color: #FEE2E2; color: #991B1B'  # Rojo claro
-            else:
-                return 'background-color: #D1FAE5; color: #065F46'  # Verde claro
-        return ''
+    # Tabla sin colores
+    st.dataframe(df, use_container_width=True)
     
-    st.dataframe(
-        df.style.applymap(color_pvalues, subset=['ADF_p', 'ARCH_LM_p', 'Ljung_resid_p', 'Ljung_resid2_p', 'JarqueBera_p']),
-        use_container_width=True
-    )
-    
-    st.caption("**Tabla:** Resultados de las pruebas estadísticas. Verde: p-value > 0.05 (no se rechaza H₀). Rojo: p-value < 0.05 (se rechaza H₀).")
+    st.caption("**Tabla:** Resultados de las pruebas estadísticas para validar los supuestos del modelo GARCH.")
 
     st.markdown("##")
     
@@ -488,78 +521,78 @@ elif page == "🔬 Diagnósticos GARCH":
     # INTERPRETACIÓN DE CADA TEST
     # ============================
     
-    st.subheader("📖 Interpretación de los Diagnósticos")
+    st.subheader("Interpretación de los Diagnósticos")
     
-    with st.expander("🔹 **1. Prueba ADF (Augmented Dickey-Fuller)**", expanded=True):
+    with st.expander("**1. Prueba ADF (Augmented Dickey-Fuller)**", expanded=True):
         st.markdown("""
         **Objetivo:** Verificar si la serie de rendimientos es estacionaria.
         
         - **Hipótesis nula (H₀):** La serie tiene raíz unitaria (no es estacionaria)
         - **Interpretación:**
-            - ✅ **p-value < 0.05:** Rechazamos H₀ → La serie ES estacionaria (✓ Supuesto cumplido)
-            - ❌ **p-value > 0.05:** No rechazamos H₀ → La serie NO es estacionaria (⚠ Problema)
+            - **p-value < 0.05:** Rechazamos H₀ → La serie ES estacionaria (Supuesto cumplido)
+            - **p-value > 0.05:** No rechazamos H₀ → La serie NO es estacionaria (Problema)
         
         **¿Por qué importa?** GARCH requiere que los rendimientos sean estacionarios para que el modelo sea válido.
         """)
     
-    with st.expander("🔹 **2. Test ARCH-LM (Heteroscedasticidad Condicional)**"):
+    with st.expander("**2. Test ARCH-LM (Heteroscedasticidad Condicional)**"):
         st.markdown("""
         **Objetivo:** Detectar si quedan efectos ARCH en los residuales después de ajustar GARCH.
         
         - **Hipótesis nula (H₀):** No hay efectos ARCH en los residuales
         - **Interpretación:**
-            - ✅ **p-value > 0.05:** No rechazamos H₀ → No hay heteroscedasticidad residual (✓ Modelo adecuado)
-            - ❌ **p-value < 0.05:** Rechazamos H₀ → Aún hay efectos ARCH (⚠ El modelo no captura toda la volatilidad)
+            - **p-value > 0.05:** No rechazamos H₀ → No hay heteroscedasticidad residual (Modelo adecuado)
+            - **p-value < 0.05:** Rechazamos H₀ → Aún hay efectos ARCH (El modelo no captura toda la volatilidad)
         
         **¿Por qué importa?** Si el test rechaza, significa que GARCH(1,1) es insuficiente y necesitaríamos más rezagos.
         """)
     
-    with st.expander("🔹 **3. Test Ljung-Box (Residuales)**"):
+    with st.expander("**3. Test Ljung-Box (Residuales)**"):
         st.markdown("""
         **Objetivo:** Verificar que no haya autocorrelación en los residuales estandarizados.
         
         - **Hipótesis nula (H₀):** No hay autocorrelación en los residuales
         - **Interpretación:**
-            - ✅ **p-value > 0.05:** No rechazamos H₀ → Residuales son ruido blanco (✓ Modelo bien especificado)
-            - ❌ **p-value < 0.05:** Rechazamos H₀ → Hay autocorrelación (⚠ El modelo no captura toda la estructura)
+            - **p-value > 0.05:** No rechazamos H₀ → Residuales son ruido blanco (Modelo bien especificado)
+            - **p-value < 0.05:** Rechazamos H₀ → Hay autocorrelación (El modelo no captura toda la estructura)
         
         **¿Por qué importa?** Si hay autocorrelación, el modelo GARCH no está capturando toda la dinámica temporal.
         """)
     
-    with st.expander("🔹 **4. Test Ljung-Box (Residuales²)**"):
+    with st.expander("**4. Test Ljung-Box (Residuales²)**"):
         st.markdown("""
         **Objetivo:** Verificar que no haya autocorrelación en los residuales al cuadrado (proxy de volatilidad).
         
         - **Hipótesis nula (H₀):** No hay autocorrelación en los residuales²
         - **Interpretación:**
-            - ✅ **p-value > 0.05:** No rechazamos H₀ → No hay estructura residual en la volatilidad (✓ GARCH captura la volatilidad)
-            - ❌ **p-value < 0.05:** Rechazamos H₀ → Aún hay estructura (⚠ Necesita ajustes)
+            - **p-value > 0.05:** No rechazamos H₀ → No hay estructura residual en la volatilidad (GARCH captura la volatilidad)
+            - **p-value < 0.05:** Rechazamos H₀ → Aún hay estructura (Necesita ajustes)
         
         **¿Por qué importa?** Es crucial para validar que GARCH capturó correctamente los clusters de volatilidad.
         """)
     
-    with st.expander("🔹 **5. Test Jarque-Bera (Normalidad)**"):
+    with st.expander("**5. Test Jarque-Bera (Normalidad)**"):
         st.markdown("""
         **Objetivo:** Evaluar si los residuales estandarizados siguen una distribución normal.
         
         - **Hipótesis nula (H₀):** Los residuales siguen una distribución normal
         - **Interpretación:**
-            - ✅ **p-value > 0.05:** No rechazamos H₀ → Residuales son aproximadamente normales
-            - ❌ **p-value < 0.05:** Rechazamos H₀ → Residuales tienen colas pesadas o asimetría
+            - **p-value > 0.05:** No rechazamos H₀ → Residuales son aproximadamente normales
+            - **p-value < 0.05:** Rechazamos H₀ → Residuales tienen colas pesadas o asimetría
         
         **¿Por qué importa?** Si se rechaza, podríamos considerar GARCH con distribución t-Student en lugar de normal.
         
         **Nota:** Es común que este test rechace en datos financieros debido a eventos extremos (colas pesadas).
         """)
     
-    with st.expander("🔹 **6. Condición α + β < 1**"):
+    with st.expander("**6. Condición α + β < 1**"):
         st.markdown("""
         **Objetivo:** Verificar la estacionariedad de la varianza condicional.
         
         - **Condición requerida:** α + β < 1
         - **Interpretación:**
-            - ✅ **α + β < 1:** La volatilidad es estacionaria (✓ El modelo es estable)
-            - ❌ **α + β ≥ 1:** Volatilidad no estacionaria (⚠ Proceso explosivo o integrado)
+            - **α + β < 1:** La volatilidad es estacionaria (El modelo es estable)
+            - **α + β ≥ 1:** Volatilidad no estacionaria (Proceso explosivo o integrado)
         
         **¿Por qué importa?** Si α + β ≥ 1, los shocks de volatilidad persisten indefinidamente (no hay reversión a la media).
         
@@ -572,72 +605,17 @@ elif page == "🔬 Diagnósticos GARCH":
     st.markdown("##")
     
     # ============================
-    # RESUMEN VISUAL
-    # ============================
-    
-    st.subheader("📊 Resumen de Validación")
-    
-    if df is not None and len(df) > 0:
-        # Contar cuántos activos pasan cada test (p > 0.05 excepto ADF donde p < 0.05)
-        tests = {
-            'ADF (p < 0.05)': (df['ADF_p'] < 0.05).sum() if 'ADF_p' in df.columns else 0,
-            'ARCH-LM (p > 0.05)': (df['ARCH_LM_p'] > 0.05).sum() if 'ARCH_LM_p' in df.columns else 0,
-            'Ljung-Box resid (p > 0.05)': (df['Ljung_resid_p'] > 0.05).sum() if 'Ljung_resid_p' in df.columns else 0,
-            'Ljung-Box resid² (p > 0.05)': (df['Ljung_resid2_p'] > 0.05).sum() if 'Ljung_resid2_p' in df.columns else 0,
-            'Jarque-Bera (p > 0.05)': (df['JarqueBera_p'] > 0.05).sum() if 'JarqueBera_p' in df.columns else 0,
-            'α + β < 1': (df['alpha+beta'] < 1).sum() if 'alpha+beta' in df.columns else 0
-        }
-        
-        total_activos = len(df)
-        
-        df_summary = pd.DataFrame({
-            'Test': list(tests.keys()),
-            'Activos que cumplen': list(tests.values()),
-            'Total de activos': [total_activos] * len(tests),
-            'Porcentaje': [f"{(v/total_activos)*100:.1f}%" for v in tests.values()]
-        })
-        
-        fig = px.bar(
-            df_summary,
-            x='Test',
-            y='Activos que cumplen',
-            text='Porcentaje',
-            color='Activos que cumplen',
-            color_continuous_scale=['#EF4444', '#F59E0B', '#10B981'],
-            template=plotly_template,
-            height=500
-        )
-        
-        fig.update_layout(
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            font=dict(color=text_color),
-            title_font_color='#1E3A8A',
-            xaxis=dict(showgrid=True, gridcolor='#E5E7EB', tickangle=-45),
-            yaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Número de activos'),
-            showlegend=False
-        )
-        
-        fig.update_traces(textposition='outside')
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-        st.caption("**Análisis:** Este gráfico muestra cuántos activos cumplen cada criterio de validación. Un modelo GARCH robusto debería pasar la mayoría de los tests.")
-    
-    st.markdown("##")
-    
-    # ============================
     # CONCLUSIÓN
     # ============================
     
     st.info("""
-    **💡 Conclusión General:**
+    **Conclusión General:**
     
     Un modelo GARCH(1,1) es adecuado cuando:
-    - ✅ Los rendimientos son estacionarios (ADF rechaza)
-    - ✅ No quedan efectos ARCH residuales (ARCH-LM no rechaza)
-    - ✅ Los residuales son ruido blanco (Ljung-Box no rechaza)
-    - ✅ La volatilidad es estacionaria (α + β < 1)
+    - Los rendimientos son estacionarios (ADF rechaza)
+    - No quedan efectos ARCH residuales (ARCH-LM no rechaza)
+    - Los residuales son ruido blanco (Ljung-Box no rechaza)
+    - La volatilidad es estacionaria (α + β < 1)
     
     La normalidad (Jarque-Bera) es deseable pero no crítica; su rechazo es común en finanzas 
     debido a colas pesadas, lo cual puede manejarse con distribuciones alternativas (t-Student).
