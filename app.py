@@ -3,205 +3,183 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# ============================================================
+# =====================================================================
 # CONFIGURACIÓN GENERAL
-# ============================================================
+# =====================================================================
 
 st.set_page_config(
     page_title="Aversión al Riesgo – Mercado Colombiano",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# ============================================================
-# FUNCIÓN DE CARGA Y LIMPIEZA DE DATOS
-# ============================================================
+# =====================================================================
+# CARGA DE DATOS ROBUSTA
+# =====================================================================
 
 @st.cache_data
 def cargar_datos():
 
     df = pd.read_csv("data/resultados_completos_tablero.csv")
 
-    # Renombrar columnas a formato más limpio
+    # normalizar nombres de columnas
+    cols = {c.lower(): c for c in df.columns}
+
+    # renombrar (detecta automáticamente la columna con este significado)
+    def col(posibles):
+        for p in posibles:
+            if p.lower() in cols:
+                return cols[p.lower()]
+        return None
+
     df = df.rename(columns={
-        "Activo": "Activo",
-        "gamma_CRRA": "gamma_CRRA",
-        "gamma_FTP": "gamma_FTP",
-        "gamma_GARCH": "gamma_GARCH",
-        "vol_hist": "Vol_Hist",
-        "sigma_garch": "Vol_GARCH"
+        col(["activo"]): "Activo",
+        col(["gamma_crra", "crra"]): "gamma_CRRA",
+        col(["gamma_ftp", "ftp"]): "gamma_FTP",
+        col(["gamma_garch", "garch"]): "gamma_GARCH",
+        col(["vol_hist", "volatilidad", "vol"]): "Vol_Hist",
+        col(["sigma_garch", "sigma_last", "vol_garch"]): "Vol_GARCH"
     })
 
-    # Limpieza de nombres de activos
+    # limpiar nombres de acciones
     df["Activo"] = df["Activo"].str.replace("Datos históricos de ", "", regex=False)
-    df["Activo"] = df["Activo"].str.replace(" (.*)", "", regex=True)
+    df["Activo"] = df["Activo"].str.replace(r" \(.+\)", "", regex=True)
 
-    # Excluir TPM, IBR y DTB3 de las gráficas comparativas
+    # excluir series macro
     df_filtrado = df[~df["Activo"].isin(["TPM", "IBR", "DTB3"])]
 
     return df, df_filtrado
 
 df_original, df = cargar_datos()
 
-# ============================================================
+# =====================================================================
 # SIDEBAR – NAVEGACIÓN
-# ============================================================
+# =====================================================================
 
 pagina = st.sidebar.radio(
     "Navegación",
     [
         "Resumen General",
-        "Comparación de Aversión al Riesgo",
-        "Volatilidad: Histórica vs GARCH",
-        "Diagnósticos y Resultados",
+        "Aversión al Riesgo por Acción",
+        "Volatilidad por Acción",
         "Tabla Completa"
     ]
 )
 
-# ============================================================
+# =====================================================================
 # PÁGINA 1 — RESUMEN GENERAL
-# ============================================================
+# =====================================================================
 
 if pagina == "Resumen General":
 
     st.title("Aversión al Riesgo Implícita en el Mercado Colombiano")
 
-    st.subheader("Contexto del Estudio")
-
+    st.subheader("Contexto General")
     st.markdown("""
-El tablero presenta un análisis de aversión al riesgo para el mercado colombiano,
-siguiendo la metodología del estudio de **Chávez, Milanesi y Pesce (2021)**, aplicado a datos
-de acciones e indicadores financieros entre 2020 y 2025.
+El análisis sigue la metodología del estudio de Chávez, Milanesi y Pesce (2021),
+estimando la aversión al riesgo implícita en activos financieros mediante:
 
-El objetivo es estimar el coeficiente de aversión al riesgo gamma (γ) bajo tres enfoques:
+**CRRA (Constant Relative Risk Aversion)**  
+Función de utilidad estándar donde gamma mide la curvatura y, por tanto,
+la intensidad de rechazo al riesgo.
 
-**1. CRRA — Coeficiente de Aversión Relativa al Riesgo Constante**  
-Modelo clásico de utilidad donde gamma mide la curvatura de la función de utilidad.
-Valores más altos implican mayor rechazo a la variabilidad en rendimientos.
+**FTP (Función de Tres Parámetros)**  
+Extensión más flexible que incorpora elasticidad y curvatura, permitiendo
+representar preferencias no lineales ante el riesgo.
 
-**2. FTP — Función de Tres Parámetros**  
-Extensión flexible del modelo CRRA que incorpora elasticidad y curvatura.
-Permite capturar patrones no lineales en la aversión al riesgo.
+**Modelos GARCH**  
+Modelos de volatilidad condicional que permiten estimar gamma usando
+una volatilidad que varía en el tiempo, reflejando mejor la incertidumbre
+observada en los mercados.
 
-**3. Modelo GARCH**  
-Modelo econométrico que estima volatilidad condicional.  
-Su volatilidad dinámica se utiliza como insumo para recalcular gamma
-y evaluar cómo cambia la aversión al riesgo cuando la incertidumbre no es constante.
-
-El análisis permite comparar cómo varía la percepción de riesgo según el método utilizado
-y según las condiciones del mercado.
+El estudio compara cómo cada enfoque captura la aversión al riesgo
+en acciones colombianas entre 2020 y 2025.
 """)
 
-    st.markdown("___")
+    st.markdown("---")
 
-    # KPI
     col1, col2, col3 = st.columns(3)
     col1.metric("Gamma promedio CRRA", f"{df['gamma_CRRA'].mean():.3f}")
     col2.metric("Gamma promedio FTP", f"{df['gamma_FTP'].mean():.3f}")
     col3.metric("Gamma promedio GARCH", f"{df['gamma_GARCH'].mean():.3f}")
 
-    st.markdown("___")
+    st.markdown("---")
 
-    st.subheader("Distribución general de gamma por método")
+    st.subheader("Distribución de Gamma por Método")
+
+    metodo = st.selectbox(
+        "Seleccione método:",
+        ["CRRA", "FTP", "GARCH"]
+    )
+
+    col_map = {
+        "CRRA": "gamma_CRRA",
+        "FTP": "gamma_FTP",
+        "GARCH": "gamma_GARCH"
+    }
 
     fig = px.box(
         df,
-        y=["gamma_CRRA", "gamma_FTP", "gamma_GARCH"],
-        labels={"variable": "Método", "value": "Gamma"},
-        title="Distribución de Gamma por Método"
+        y=col_map[metodo],
+        title=f"Distribución de gamma ({metodo})",
+        labels={col_map[metodo]: "Gamma"}
     )
     st.plotly_chart(fig, use_container_width=True)
 
-# ============================================================
-# PÁGINA 2 — COMPARACIÓN DE AVERSIÓN AL RIESGO
-# ============================================================
+# =====================================================================
+# PÁGINA 2 — AVERSIÓN POR ACCIÓN
+# =====================================================================
 
-elif pagina == "Comparación de Aversión al Riesgo":
+elif pagina == "Aversión al Riesgo por Acción":
 
-    st.title("Comparación de Aversión al Riesgo por Activo")
+    st.title("Aversión al Riesgo por Acción")
 
-    st.subheader("Gamma por método")
+    accion = st.selectbox("Seleccione una acción:", df["Activo"].unique())
+
+    subset = df[df["Activo"] == accion]
+
+    st.subheader("Comparación de gamma por método")
 
     fig = px.bar(
-        df,
+        subset,
         x="Activo",
         y=["gamma_CRRA", "gamma_FTP", "gamma_GARCH"],
         barmode="group",
-        title="Gamma por Activo y Método",
         labels={"value": "Gamma", "variable": "Método"},
-        height=600
+        title=f"Aversión al riesgo estimada para {accion}"
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("___")
-
-    st.subheader("Relación entre Métodos")
-
-    fig2 = px.scatter(
-        df,
-        x="gamma_CRRA",
-        y="gamma_FTP",
-        text="Activo",
-        title="Relación entre Gamma CRRA y Gamma FTP",
-        labels={"gamma_CRRA": "Gamma CRRA", "gamma_FTP": "Gamma FTP"}
-    )
-    fig2.update_traces(textposition="top center")
-    st.plotly_chart(fig2, use_container_width=True)
-
-# ============================================================
+# =====================================================================
 # PÁGINA 3 — VOLATILIDAD
-# ============================================================
+# =====================================================================
 
-elif pagina == "Volatilidad: Histórica vs GARCH":
+elif pagina == "Volatilidad por Acción":
 
-    st.title("Volatilidad Histórica y Volatilidad GARCH")
+    st.title("Volatilidad por Acción")
 
-    st.subheader("Comparación de Volatilidad por Activo")
+    accion = st.selectbox("Seleccione una acción:", df["Activo"].unique(), key="vol")
 
-    fig = px.bar(
-        df,
-        x="Activo",
-        y=["Vol_Hist", "Vol_GARCH"],
-        barmode="group",
-        labels={"value": "Volatilidad"},
-        title="Volatilidad Histórica y GARCH por Activo",
-        height=600
-    )
+    subset = df[df["Activo"] == accion]
+
+    st.subheader("Volatilidad histórica vs. GARCH")
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=["Histórica"],
+        y=[subset["Vol_Hist"].values[0]],
+        name="Volatilidad Histórica"
+    ))
+    fig.add_trace(go.Bar(
+        x=["GARCH"],
+        y=[subset["Vol_GARCH"].values[0]],
+        name="Volatilidad GARCH"
+    ))
+    fig.update_layout(title=f"Volatilidad del activo: {accion}", barmode="group")
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("___")
-
-    st.subheader("Relación entre volatilidad y aversión al riesgo")
-
-    fig2 = px.scatter(
-        df,
-        x="Vol_GARCH",
-        y="gamma_GARCH",
-        text="Activo",
-        labels={"Vol_GARCH": "Volatilidad GARCH", "gamma_GARCH": "Gamma GARCH"},
-        title="Gamma GARCH vs Volatilidad Condicional"
-    )
-    fig2.update_traces(textposition="top center")
-    st.plotly_chart(fig2, use_container_width=True)
-
-# ============================================================
-# PÁGINA 4 — DIAGNÓSTICOS
-# ============================================================
-
-elif pagina == "Diagnósticos y Resultados":
-
-    st.title("Resultados y Diagnósticos")
-
-    st.subheader("Estadísticas generales")
-
-    st.dataframe(
-        df[["Activo", "gamma_CRRA", "gamma_FTP", "gamma_GARCH", "Vol_Hist", "Vol_GARCH"]],
-        use_container_width=True
-    )
-
-# ============================================================
-# PÁGINA 5 — TABLA COMPLETA
-# ============================================================
+# =====================================================================
+# PÁGINA 4 — TABLA COMPLETA
+# =====================================================================
 
 elif pagina == "Tabla Completa":
 
