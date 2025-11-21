@@ -27,14 +27,17 @@ def load_csv(path):
     st.warning(f"No se encontró {path}.")
     return None
 
+# Cargar archivos generados por el BLOQUE FINAL del usuario
+df_crra  = load_csv("resultados_CRRA.csv")
+df_ftp   = load_csv("resultados_FTP.csv")
+df_garch = load_csv("resultados_GARCH.csv")
+df_full  = load_csv("resultados_completos_tablero.csv")
 
-# Carga de datos
-df_crra = load_csv("gamma_crra.csv")
-df_ftp = load_csv("gamma_ftp.csv")
-df_garch = load_csv("gamma_garch.csv")
-df_tests = load_csv("garch_supuestos.csv")
-df_timeseries = load_csv("garch_timeseries.csv")
-df_hist_vs_dyn = load_csv("vol_hist_vs_garch.csv")
+# Otros archivos opcionales
+df_tests        = load_csv("garch_supuestos.csv")
+df_timeseries   = load_csv("garch_timeseries.csv")
+df_hist_vs_dyn  = load_csv("vol_hist_vs_garch.csv")
+
 
 # Limpiar nombres
 def clean_name(x):
@@ -42,12 +45,12 @@ def clean_name(x):
         return x.replace("Datos históricos de ", "").split("(")[0].strip()
     return x
 
-for df in [df_crra, df_ftp, df_garch, df_tests, df_timeseries, df_hist_vs_dyn]:
+for df in [df_crra, df_ftp, df_garch, df_full, df_tests, df_timeseries, df_hist_vs_dyn]:
     if df is not None and "Activo" in df.columns:
         df["Activo"] = df["Activo"].apply(clean_name)
 
 # Activos a excluir del análisis de riesgo
-excluir = ["TRM", "TPM", "IBR", "DTB3"]
+excluir_macro = ["TRM", "TPM", "IBR", "DTB3"]
 
 # ============================================================
 # MENÚ LATERAL
@@ -73,92 +76,94 @@ if page == "Contexto":
     st.title("Aversión al Riesgo en el Mercado Colombiano — 2020–2025")
 
     st.markdown("""
-    Este tablero presenta los resultados de un estudio sobre aversión al riesgo implícita en el mercado colombiano,
-    siguiendo la metodología de **Chávez, Milanesi & Pesce (2021)**.
+    Este tablero presenta un análisis del coeficiente de aversión al riesgo γ en el mercado colombiano,
+    siguiendo la metodología planteada por Chávez, Milanesi y Pesce (2021).
 
-    El objetivo es estimar el coeficiente de aversión al riesgo γ utilizando tres metodologías:
+    Se estiman tres medidas del coeficiente γ:
 
-    **1. CRRA — Constant Relative Risk Aversion**  
-    Modelo clásico donde la utilidad depende del retorno y γ mide la concavidad de la función.
+    **CRRA — Constant Relative Risk Aversion**  
+    Modelo clásico donde γ controla la concavidad de la función de utilidad.
 
-    **2. FTP — Flexible Three-Parameter Utility**  
-    Modelo más flexible que introduce dos parámetros adicionales para capturar comportamientos no lineales.
+    **FTP — Flexible Three-Parameter Utility**  
+    Función de utilidad más general que incorpora parámetros adicionales para capturar preferencias
+    no lineales frente al riesgo.
 
-    **3. GARCH(1,1) — Volatilidad Condicional**  
-    En lugar de usar volatilidad histórica, se utiliza la volatilidad dinámica σₜ generada por un proceso GARCH(1,1)
-    con distribución t-student.
+    **GARCH(1,1)**  
+    Se usa volatilidad condicional σₜ estimada mediante un proceso GARCH con distribución t-student
+    en lugar de volatilidad histórica.
 
-    Estos modelos permiten evaluar si los inversionistas presentan aversión leve, moderada o elevada al riesgo.
+    Los resultados permiten evaluar el nivel de aversión al riesgo implícito en los precios de las acciones colombianas.
     """)
 
-    st.info("Seleccione otra sección usando el menú lateral.")
+    st.info("Usa el menú lateral para explorar las demás secciones del tablero.")
 
 # ============================================================
-# 2. AVERSIÓN AL RIESGO (CRRA / FTP / GARCH)
+# 2. AVERSIÓN AL RIESGO
 # ============================================================
 
 elif page == "Aversión al riesgo (CRRA / FTP / GARCH)":
 
     st.title("Coeficientes de Aversión al Riesgo por Activo")
 
-    if df_crra is None or df_ftp is None or df_garch is None:
-        st.error("Faltan archivos CSV de gamma.")
+    if df_full is None:
+        st.error("No se encontró resultados_completos_tablero.csv")
         st.stop()
 
-    # Merge de datos
-    df = df_crra.merge(df_ftp, on="Activo", how="outer")
-    df = df.merge(df_garch, on="Activo", how="outer")
+    df = df_full.copy()
+    df = df[~df["Activo"].isin(excluir_macro)]
 
-    df = df[~df["Activo"].isin(excluir)]
-
-    st.subheader("Tabla General")
+    st.subheader("Tabla Completa")
     st.dataframe(df.round(4), use_container_width=True)
 
-    # Gráfico de barras
-    df_long = df.melt(id_vars="Activo",
-                      value_vars=["gamma_CRRA", "gamma_FTP", "gamma_GARCH"],
-                      var_name="Método", value_name="Gamma")
+    df_long = df.melt(
+        id_vars="Activo",
+        value_vars=["gamma_CRRA", "gamma_FTP", "gamma_GARCH"],
+        var_name="Método",
+        value_name="Gamma"
+    )
 
-    st.subheader("Gamma por método")
-    fig = px.bar(df_long,
-                 x="Activo",
-                 y="Gamma",
-                 color="Método",
-                 barmode="group",
-                 template=plotly_template,
-                 title="Comparación de γ por activo",
-                 height=600)
+    st.subheader("Gamma por Método")
+    fig = px.bar(
+        df_long,
+        x="Activo",
+        y="Gamma",
+        color="Método",
+        barmode="group",
+        template=plotly_template,
+        title="Comparación de γ por activo",
+        height=600
+    )
     st.plotly_chart(fig, use_container_width=True)
 
-
 # ============================================================
-# 3. VOLATILIDAD DINÁMICA (σₜ)
+# 3. VOLATILIDAD DINÁMICA σₜ
 # ============================================================
 
 elif page == "Volatilidad dinámica (σₜ)":
 
-    st.title("Volatilidad Dinámica Estimada mediante GARCH(1,1)")
+    st.title("Volatilidad Dinámica Estimada con GARCH(1,1)")
 
     if df_timeseries is None:
-        st.error("No se encontró garch_timeseries.csv.")
+        st.error("No se encontró garch_timeseries.csv")
         st.stop()
 
-    df_timeseries["Fecha"] = pd.to_datetime(df_timeseries["Fecha"])
-    activos = df_timeseries["Activo"].unique()
+    df = df_timeseries.copy()
+    df["Fecha"] = pd.to_datetime(df["Fecha"])
+    activos = df["Activo"].unique()
 
-    st.sidebar.subheader("Filtro de activos")
-    activos_sel = st.sidebar.multiselect("Selecciona acciones:", activos, default=list(activos))
+    activos_sel = st.multiselect("Selecciona acciones:", activos, default=list(activos))
 
-    df_plot = df_timeseries[df_timeseries["Activo"].isin(activos_sel)]
+    df_plot = df[df["Activo"].isin(activos_sel)]
 
-    fig = px.line(df_plot,
-                  x="Fecha",
-                  y="sigma_t",
-                  color="Activo",
-                  template=plotly_template,
-                  title="Volatilidad dinámica (σₜ)")
+    fig = px.line(
+        df_plot,
+        x="Fecha",
+        y="sigma_t",
+        color="Activo",
+        template=plotly_template,
+        title="Volatilidad dinámica (σₜ)"
+    )
     st.plotly_chart(fig, use_container_width=True)
-
 
 # ============================================================
 # 4. VOLATILIDAD HISTÓRICA VS DINÁMICA
@@ -169,12 +174,12 @@ elif page == "Volatilidad histórica vs dinámica":
     st.title("Volatilidad Histórica vs Volatilidad Dinámica (GARCH)")
 
     if df_hist_vs_dyn is None:
-        st.error("No se encontró vol_hist_vs_garch.csv.")
+        st.error("No se encontró vol_hist_vs_garch.csv")
         st.stop()
 
     df_hist_vs_dyn["Fecha"] = pd.to_datetime(df_hist_vs_dyn["Fecha"])
-    activos = df_hist_vs_dyn["Activo"].unique()
 
+    activos = df_hist_vs_dyn["Activo"].unique()
     activo_sel = st.selectbox("Selecciona una acción:", activos)
 
     df_sel = df_hist_vs_dyn[df_hist_vs_dyn["Activo"] == activo_sel]
@@ -182,17 +187,18 @@ elif page == "Volatilidad histórica vs dinámica":
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df_sel["Fecha"], y=df_sel["vol_hist"],
-        mode="lines", name="Volatilidad histórica"
+        mode="lines", name="Volatilidad Histórica"
     ))
     fig.add_trace(go.Scatter(
         x=df_sel["Fecha"], y=df_sel["sigma_t"],
         mode="lines", name="Volatilidad GARCH (σₜ)"
     ))
-    fig.update_layout(template=plotly_template,
-                      title=f"Histórica vs Dinámica – {activo_sel}",
-                      height=600)
+    fig.update_layout(
+        template=plotly_template,
+        title=f"Volatilidad Histórica vs GARCH – {activo_sel}",
+        height=600
+    )
     st.plotly_chart(fig, use_container_width=True)
-
 
 # ============================================================
 # 5. DIAGNÓSTICOS GARCH
@@ -200,22 +206,26 @@ elif page == "Volatilidad histórica vs dinámica":
 
 elif page == "Diagnósticos GARCH":
 
-    st.title("Pruebas de Diagnóstico — Modelos GARCH(1,1)")
+    st.title("Pruebas de Diagnóstico GARCH")
 
     if df_tests is None:
-        st.error("No se encontró garch_supuestos.csv.")
+        st.error("No se encontró garch_supuestos.csv")
         st.stop()
 
-    st.subheader("Resultados de las pruebas (redondeados)")
+    df = df_tests.copy()
+    df = df.round(4)
 
-    st.dataframe(df_tests.round(4), use_container_width=True)
+    st.subheader("Tabla de Resultados")
+    st.dataframe(df, use_container_width=True)
 
     st.markdown("""
-    **Interpretación:**  
-    - **ADF p < 0.05** → retornos estacionarios  
-    - **ARCH-LM p < 0.05** → heterocedasticidad → GARCH es apropiado  
-    - **Ljung-Box p > 0.05** → residuos no autocorrelacionados  
-    - **Jarque-Bera p < 0.05** → residuos no normales (común en mercados)  
-    - **alpha + beta < 1** → el proceso GARCH es estacionario  
+    **Interpretación sugerida:**
+
+    - **ADF (p < 0.05)** → la serie de retornos es estacionaria.  
+    - **ARCH-LM (p < 0.05)** → hay heterocedasticidad → aplicar GARCH es apropiado.  
+    - **Ljung-Box residuos (p > 0.05)** → no hay autocorrelación en residuos.  
+    - **Ljung-Box residuos² (p > 0.05)** → no hay autocorrelación en la varianza.  
+    - **Jarque-Bera (p < 0.05)** → residuos no normales (común en finanzas).  
+    - **alpha + beta < 1** → el proceso GARCH es estacionario.  
     """)
 
