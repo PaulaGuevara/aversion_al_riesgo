@@ -613,12 +613,6 @@ elif page == "Diagnósticos GARCH":
     st.info("""
     **Conclusión General:**
     
-    Un modelo GARCH(1,1) es adecuado cuando:
-    - Los rendimientos son estacionarios (ADF rechaza)
-    - No quedan efectos ARCH residuales (ARCH-LM no rechaza)
-    - Los residuales son ruido blanco (Ljung-Box no rechaza)
-    - La volatilidad es estacionaria (α + β < 1)
+    La aversión al riesgo implícita en el mercado financiero colombiano entre 2020 y 2025 fue estimada mediante funciones de utilidad CRRA y FTP junto con medidas de volatilidad histórica y condicional GARCH(1,1). Los resultados muestran que la aversión al riesgo bajo CRRA es baja y estable, mientras que la función FTP genera valores más altos debido a su sensibilidad a colas pesadas. Aunque los modelos GARCH capturan adecuadamente la dinámica de la volatilidad, la volatilidad condicional no altera de manera significativa el coeficiente de aversión al riesgo estimado. En conjunto, el análisis evidencia que, pese a la alta persistencia de la volatilidad en Colombia, la aversión al riesgo basada en CRRA se mantiene rígida frente a los cambios en la incertidumbre, lo que resalta la importancia de explorar funciones de utilidad o metodologías más flexibles en estudios futuros.
     
-    La normalidad (Jarque-Bera) es deseable pero no crítica; su rechazo es común en finanzas 
-    debido a colas pesadas, lo cual puede manejarse con distribuciones alternativas (t-Student).
     """)
