@@ -33,13 +33,18 @@ st.markdown("""
         color: #1E3A8A;
     }
     
-    /* Sidebar con fondo azul claro */
+    /* Sidebar con fondo azul oscuro */
     [data-testid="stSidebar"] {
-        background-color: #DBEAFE;
+        background-color: #1E3A8A;
     }
     
     [data-testid="stSidebar"] > div:first-child {
-        background-color: #DBEAFE;
+        background-color: #1E3A8A;
+    }
+    
+    /* Texto en sidebar */
+    [data-testid="stSidebar"] * {
+        color: white !important;
     }
     
     /* Métricas */
@@ -65,7 +70,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-plotly_template = "plotly_white"
+plotly_template = "simple_white"
 
 # ============================================================
 # FUNCIÓN PARA CARGAR DATOS
@@ -211,7 +216,7 @@ if page == "Contexto":
     st.markdown("##")
     
     # ============================
-    # Gráfico inicial
+    # Gráfico inicial - BARRAS
     # ============================
 
     st.subheader("Comparación General de γ por Método")
@@ -222,37 +227,31 @@ if page == "Contexto":
         var_name="Método",
         value_name="Gamma"
     )
+    
+    # Renombrar métodos
+    df_long["Método"] = df_long["Método"].replace({
+        "gamma_CRRA": "CRRA",
+        "gamma_FTP": "FTP",
+        "gamma_GARCH": "GARCH"
+    })
 
-    # Gráfico de líneas
-    fig = go.Figure()
-    
-    metodos = df_long["Método"].unique()
-    colores_metodo = {
-        "gamma_CRRA": color_palette[0],
-        "gamma_FTP": color_palette[1],
-        "gamma_GARCH": color_palette[2]
-    }
-    
-    for i, metodo in enumerate(metodos):
-        df_metodo = df_long[df_long["Método"] == metodo]
-        fig.add_trace(go.Scatter(
-            x=df_metodo["Activo"],
-            y=df_metodo["Gamma"],
-            mode='lines+markers',
-            name=metodo.replace("gamma_", ""),
-            line=dict(color=colores_metodo[metodo], width=3),
-            marker=dict(size=8)
-        ))
+    fig = px.bar(
+        df_long,
+        x="Activo",
+        y="Gamma",
+        color="Método",
+        color_discrete_sequence=color_palette,
+        barmode="group",
+        template=plotly_template,
+        height=500
+    )
     
     fig.update_layout(
         plot_bgcolor='white',
         paper_bgcolor='white',
-        font=dict(color=text_color),
-        title_font_color='#1E3A8A',
-        xaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Activo'),
+        xaxis=dict(showgrid=False, title='Activo'),
         yaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Coeficiente γ'),
-        height=500,
-        hovermode='x unified'
+        showlegend=True
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -290,15 +289,22 @@ elif page == "Aversión al riesgo":
         var_name="Método", 
         value_name="Gamma"
     )
+    
+    # Renombrar métodos
+    df_long["Método"] = df_long["Método"].replace({
+        "gamma_CRRA": "CRRA",
+        "gamma_FTP": "FTP",
+        "gamma_GARCH": "GARCH"
+    })
 
     # Gráfico de líneas
     fig = go.Figure()
     
     metodos = df_long["Método"].unique()
     colores_metodo = {
-        "gamma_CRRA": color_palette[0],
-        "gamma_FTP": color_palette[1],
-        "gamma_GARCH": color_palette[2]
+        "CRRA": color_palette[0],
+        "FTP": color_palette[1],
+        "GARCH": color_palette[2]
     }
     
     for metodo in metodos:
@@ -307,7 +313,7 @@ elif page == "Aversión al riesgo":
             x=df_metodo["Activo"],
             y=df_metodo["Gamma"],
             mode='lines+markers',
-            name=metodo.replace("gamma_", ""),
+            name=metodo,
             line=dict(color=colores_metodo[metodo], width=3),
             marker=dict(size=8)
         ))
@@ -315,12 +321,11 @@ elif page == "Aversión al riesgo":
     fig.update_layout(
         plot_bgcolor='white',
         paper_bgcolor='white',
-        font=dict(color=text_color),
-        title_font_color='#1E3A8A',
-        xaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Activo'),
+        xaxis=dict(showgrid=False, title='Activo'),
         yaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Coeficiente γ'),
         height=600,
-        hovermode='x unified'
+        hovermode='x unified',
+        showlegend=True
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -390,12 +395,11 @@ elif page == "Volatilidad dinámica":
     fig.update_layout(
         plot_bgcolor='white',
         paper_bgcolor='white',
-        font=dict(color=text_color),
-        title_font_color='#1E3A8A',
-        xaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Fecha'),
+        xaxis=dict(showgrid=False, title='Fecha'),
         yaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Volatilidad Condicional (σₜ)'),
         height=600,
         hovermode='x unified',
+        showlegend=True,
         legend=dict(
             yanchor="top",
             y=0.99,
@@ -462,15 +466,13 @@ elif page == "Volatilidad histórica vs dinámica":
     ))
     
     fig.update_layout(
-        template=plotly_template,
         height=600,
         plot_bgcolor='white',
         paper_bgcolor='white',
-        font=dict(color=text_color),
-        title_font_color='#1E3A8A',
-        xaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Fecha'),
+        xaxis=dict(showgrid=False, title='Fecha'),
         yaxis=dict(showgrid=True, gridcolor='#E5E7EB', title='Volatilidad'),
         hovermode='x unified',
+        showlegend=True,
         legend=dict(
             yanchor="top",
             y=0.99,
